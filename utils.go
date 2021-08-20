@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 )
 
 func errorHandler(err error) {
@@ -13,9 +12,8 @@ func errorHandler(err error) {
 	}
 }
 
-func genericFetch(slug string) *http.Response {
-	today := time.Now().Unix() // Default date
-	fixedApiURL := fmt.Sprintf("%s/%s?date=%d", API_URL, slug, today)
+func genericFetch(slug string, date int64) *http.Response {
+	fixedApiURL := fmt.Sprintf("%s/%s?date=%d", API_URL, slug, date)
 	apiResponse, errResponse := http.Get(fixedApiURL)
 	errorHandler(errResponse)
 	return apiResponse

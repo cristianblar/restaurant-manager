@@ -1,14 +1,13 @@
 package main
 
+import (
+	"time"
+)
+
 func main() {
 
-	// GET de Productos
-	// productsData := fetchProducts()
+	today := time.Now().Unix() // Default date
 
-	// GET de Transacciones
-	// transactionsData := fetchTransactions(productsData.Products)
-
-	// GET de Compradores
-	// buyersData := fetchBuyers(transactionsData.Transactions)
+	todayData := fetchDayData(today)
 
 }

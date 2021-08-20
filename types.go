@@ -6,19 +6,11 @@ type Product struct {
 	Price float32
 }
 
-type ProductsData struct {
-	Products map[string]*Product
-}
-
 type Transaction struct {
 	Id       string
 	Ip       string
 	Device   string
 	Products []*Product
-}
-
-type TransactionsData struct {
-	Transactions map[string][]*Transaction
 }
 
 type Buyer struct {
@@ -28,6 +20,7 @@ type Buyer struct {
 	Transactions []*Transaction
 }
 
-type BuyersData struct {
+type Day struct {
+	Date   int64
 	Buyers []*Buyer
 }

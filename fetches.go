@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
-func fetchProducts() *ProductsData {
+func fetchProducts(date int64, productsChannel chan<- map[string]*Product) {
 
-	responseProducts := genericFetch("products")
+	responseProducts := genericFetch("products", date)
 
 	// Creación de reader con csv para leer csv
 	csvReader := csv.NewReader(responseProducts.Body)
@@ -24,8 +24,11 @@ func fetchProducts() *ProductsData {
 	errorHandler(errProductsData)
 
 	// Instanciación de struct ProductsData
-	productsDataProcessed := new(ProductsData)
-	productsDataProcessed.Products = make(map[string]*Product)
+	// productsDataProcessed := new(ProductsData)
+	// productsDataProcessed.Products = make(map[string]*Product)
+
+	productsDataProcessed := make(map[string]*Product)
+
 	for _, product := range productsData {
 		// Conversión del precio del producto a int
 		numPrice, errnumPrice := strconv.Atoi(product[2])
@@ -36,22 +39,30 @@ func fetchProducts() *ProductsData {
 		newProduct.Id = product[0]
 		newProduct.Name = product[1]
 		newProduct.Price = dollarPrice
-		productsDataProcessed.Products[newProduct.Id] = newProduct
+		productsDataProcessed[newProduct.Id] = newProduct
 	}
 
-	return productsDataProcessed
+	productsChannel <- productsDataProcessed
+	close(productsChannel)
+
+	// return productsDataProcessed
 
 }
 
-func fetchTransactions(products map[string]*Product) *TransactionsData {
-	responseTransactions := genericFetch("transactions")
+func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, transactionsChannel chan<- map[string][]*Transaction) {
+
+	responseTransactions := genericFetch("transactions", date)
 
 	// Creación de reader con bufio para leer por bytes
 	transactionsReader := bufio.NewReader(responseTransactions.Body)
 
 	// Instanciación de struct TransactionsData
-	transactionsDataProcessed := new(TransactionsData)
-	transactionsDataProcessed.Transactions = make(map[string][]*Transaction)
+	// transactionsDataProcessed := new(TransactionsData)
+	// transactionsDataProcessed.Transactions = make(map[string][]*Transaction)
+
+	transactionsDataProcessed := make(map[string][]*Transaction)
+
+	productsMap := <-productsChannel
 
 	// for forever para la cantidad de transacciones que es desconocida
 	for {
@@ -61,7 +72,7 @@ func fetchTransactions(products map[string]*Product) *TransactionsData {
 
 		// Instanciación de struct Transaction para agregar a TransactionsData.Transactions
 		newTransaction := new(Transaction)
-		var mapKey string = ""
+		var mapKey string
 
 		// for de 5 iteraciones para leer y guardar cada uno de los 5 datos por transacción
 		for i := 0; i < 5; i++ {
@@ -100,7 +111,7 @@ func fetchTransactions(products map[string]*Product) *TransactionsData {
 				productIdsArray := strings.Split(productIds, ",")
 				var productsArray []*Product
 				for _, product := range productIdsArray {
-					productsArray = append(productsArray, products[product])
+					productsArray = append(productsArray, productsMap[product])
 				}
 				newTransaction.Products = productsArray
 			}
@@ -116,16 +127,19 @@ func fetchTransactions(products map[string]*Product) *TransactionsData {
 		}
 
 		// Agrega la transacción al map de TransactionsData.Transactions
-		transactionsDataProcessed.Transactions[mapKey] = append(transactionsDataProcessed.Transactions[mapKey], newTransaction)
+		transactionsDataProcessed[mapKey] = append(transactionsDataProcessed[mapKey], newTransaction)
 
 	}
 
-	return transactionsDataProcessed
+	transactionsChannel <- transactionsDataProcessed
+	close(transactionsChannel)
+
+	// return transactionsDataProcessed
 }
 
-func fetchBuyers(transactions map[string][]*Transaction) *BuyersData {
+func fetchBuyers(date int64, transactionsChannel <-chan map[string][]*Transaction, buyersChannel chan<- []*Buyer) {
 
-	responseBuyers := genericFetch("buyers")
+	responseBuyers := genericFetch("buyers", date)
 
 	// Uso de ReadAll para leer todo el Body del http.Get (se necesita todo)
 	buyersData, errBuyersData := io.ReadAll(responseBuyers.Body)
@@ -133,15 +147,39 @@ func fetchBuyers(transactions map[string][]*Transaction) *BuyersData {
 
 	// JSON Unmarshal (paso de JSON en string a Go structs)
 	// Instanciación de struct BuyersData
-	buyersDataProcessed := new(BuyersData)
-	json.Unmarshal(buyersData, &buyersDataProcessed.Buyers)
+	// buyersDataProcessed := new(BuyersData)
+	// json.Unmarshal(buyersData, &buyersDataProcessed.Buyers)
 
-	for _, buyer := range buyersDataProcessed.Buyers {
-		foundTransactions, exist := transactions[buyer.Id]
+	var buyersDataProcessed []*Buyer
+	json.Unmarshal(buyersData, &buyersDataProcessed)
+
+	transactionsMap := <-transactionsChannel
+
+	for _, buyer := range buyersDataProcessed {
+		foundTransactions, exist := transactionsMap[buyer.Id]
 		if exist {
 			buyer.Transactions = foundTransactions
 		}
 	}
 
-	return buyersDataProcessed
+	buyersChannel <- buyersDataProcessed
+	close(buyersChannel)
+
+	// return buyersDataProcessed
+}
+
+func fetchDayData(date int64) []*Buyer {
+
+	productsChannel := make(chan map[string]*Product)
+	transactionsChannel := make(chan map[string][]*Transaction)
+	buyersChannel := make(chan []*Buyer)
+
+	go fetchProducts(date, productsChannel)
+	go fetchTransactions(date, productsChannel, transactionsChannel)
+	go fetchBuyers(date, transactionsChannel, buyersChannel)
+
+	dayDataProcessed := <-buyersChannel
+
+	return dayDataProcessed
+
 }
