@@ -7,27 +7,27 @@ type Product struct {
 }
 
 type ProductsData struct {
+	Products map[string]*Product
+}
+
+type Transaction struct {
+	Id       string
+	Ip       string
+	Device   string
 	Products []*Product
 }
 
+type TransactionsData struct {
+	Transactions map[string][]*Transaction
+}
+
 type Buyer struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-	Age  uint8  `json:"age"`
+	Id           string `json:"id"`
+	Name         string `json:"name"`
+	Age          uint8  `json:"age"`
+	Transactions []*Transaction
 }
 
 type BuyersData struct {
 	Buyers []*Buyer
-}
-
-type Transaction struct {
-	Id         string
-	BuyerId    string
-	Ip         string
-	Device     string
-	ProductIds []string
-}
-
-type TransactionsData struct {
-	Transactions []*Transaction
 }

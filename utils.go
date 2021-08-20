@@ -11,7 +11,6 @@ func errorHandler(err error) {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	return
 }
 
 func genericFetch(slug string) *http.Response {
