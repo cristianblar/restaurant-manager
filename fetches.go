@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"io"
 	"log"
 	"strconv"
@@ -23,10 +22,6 @@ func fetchProducts(date int64, productsChannel chan<- map[string]*Product) {
 	productsData, errProductsData := csvReader.ReadAll()
 	errorHandler(errProductsData)
 
-	// Instanciación de struct ProductsData
-	// productsDataProcessed := new(ProductsData)
-	// productsDataProcessed.Products = make(map[string]*Product)
-
 	productsDataProcessed := make(map[string]*Product)
 
 	for _, product := range productsData {
@@ -37,15 +32,14 @@ func fetchProducts(date int64, productsChannel chan<- map[string]*Product) {
 		var dollarPrice float32 = float32(numPrice) / 100
 		newProduct := new(Product)
 		newProduct.Id = product[0]
-		newProduct.Name = product[1]
+		newProduct.Name = strings.ReplaceAll(product[1], "&", "and")
 		newProduct.Price = dollarPrice
+		newProduct.DType = "Product"
 		productsDataProcessed[newProduct.Id] = newProduct
 	}
 
 	productsChannel <- productsDataProcessed
 	close(productsChannel)
-
-	// return productsDataProcessed
 
 }
 
@@ -56,11 +50,9 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 	// Creación de reader con bufio para leer por bytes
 	transactionsReader := bufio.NewReader(responseTransactions.Body)
 
-	// Instanciación de struct TransactionsData
-	// transactionsDataProcessed := new(TransactionsData)
-	// transactionsDataProcessed.Transactions = make(map[string][]*Transaction)
-
+	// Creación de mapas para structs
 	transactionsDataProcessed := make(map[string][]*Transaction)
+	originsMap := make(map[string]*Origin)
 
 	productsMap := <-productsChannel
 
@@ -70,7 +62,6 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 		loopFlag := false
 		emptyFlag := false
 
-		// Instanciación de struct Transaction para agregar a TransactionsData.Transactions
 		newTransaction := new(Transaction)
 		var mapKey string
 
@@ -102,9 +93,21 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 			case 1:
 				mapKey = string(bytes.Trim(transactionBytes, "\x00")) // BuyerId
 			case 2:
-				newTransaction.Ip = string(bytes.Trim(transactionBytes, "\x00"))
+				currentIp := string(bytes.Trim(transactionBytes, "\x00"))
+				foundOrigin, exists := originsMap[currentIp]
+				if exists {
+					newTransaction.Origin = foundOrigin
+				} else {
+					newOrigin := new(Origin)
+					newOrigin.Ip = currentIp
+					newOrigin.DType = "Origin"
+					originsMap[currentIp] = newOrigin
+					newTransaction.Origin = newOrigin
+				}
 			case 3:
-				newTransaction.Device = string(bytes.Trim(transactionBytes, "\x00"))
+				if newTransaction.Origin.Device == "" {
+					newTransaction.Origin.Device = string(bytes.Trim(transactionBytes, "\x00"))
+				}
 			case 4:
 				productIds := string(bytes.Trim(transactionBytes, "\x00"))
 				productIds = productIds[1 : len(productIds)-1] // Eliminación de paréntesis
@@ -118,7 +121,7 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 
 		}
 
-		// Uso de las flags para manejar el for forever
+		// Uso de las flags para control de for forever
 		if loopFlag {
 			break
 		}
@@ -126,7 +129,8 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 			continue
 		}
 
-		// Agrega la transacción al map de TransactionsData.Transactions
+		// Agrega la transacción al map de Transactions
+		newTransaction.DType = "Transaction"
 		transactionsDataProcessed[mapKey] = append(transactionsDataProcessed[mapKey], newTransaction)
 
 	}
@@ -134,7 +138,6 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 	transactionsChannel <- transactionsDataProcessed
 	close(transactionsChannel)
 
-	// return transactionsDataProcessed
 }
 
 func fetchBuyers(date int64, transactionsChannel <-chan map[string][]*Transaction, buyersChannel chan<- []*Buyer) {
@@ -145,17 +148,13 @@ func fetchBuyers(date int64, transactionsChannel <-chan map[string][]*Transactio
 	buyersData, errBuyersData := io.ReadAll(responseBuyers.Body)
 	errorHandler(errBuyersData)
 
-	// JSON Unmarshal (paso de JSON en string a Go structs)
-	// Instanciación de struct BuyersData
-	// buyersDataProcessed := new(BuyersData)
-	// json.Unmarshal(buyersData, &buyersDataProcessed.Buyers)
-
 	var buyersDataProcessed []*Buyer
-	json.Unmarshal(buyersData, &buyersDataProcessed)
+	jsoniterUnmarshall(buyersData, &buyersDataProcessed, "external")
 
 	transactionsMap := <-transactionsChannel
 
 	for _, buyer := range buyersDataProcessed {
+		buyer.DType = "Buyer"
 		foundTransactions, exist := transactionsMap[buyer.Id]
 		if exist {
 			buyer.Transactions = foundTransactions
@@ -165,7 +164,6 @@ func fetchBuyers(date int64, transactionsChannel <-chan map[string][]*Transactio
 	buyersChannel <- buyersDataProcessed
 	close(buyersChannel)
 
-	// return buyersDataProcessed
 }
 
 func fetchDayData(date int64) []*Buyer {
