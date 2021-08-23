@@ -10,88 +10,139 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 )
 
-func connectToDb(firstConnection bool, newDate bool, dbOp func(dgraphClient *dgo.Dgraph, ctx context.Context, opData []byte) []byte, opData []byte) []byte {
+type DatabaseConnection struct {
+	Connection   *grpc.ClientConn
+	DgraphClient *dgo.Dgraph
+	Context      context.Context
+}
 
-	DGRAPH_ENDPOINT := os.Getenv("DGRAPH_ENDPOINT")
-	dialOpts := append([]grpc.DialOption{}, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize((1024*6)*1024)))
-	conn, connError := grpc.Dial(DGRAPH_ENDPOINT, dialOpts...)
-	errorHandler(connError)
-	defer conn.Close()
+// DB Singleton:
+var databaseSingleton *DatabaseConnection = nil
 
-	dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(conn))
-	ctx := context.Background()
+func CreateDatabase(schema string) *DatabaseConnection {
+	if databaseSingleton == nil {
+		databaseSingleton = new(DatabaseConnection)
+		ctx := context.Background()
+		databaseSingleton.Context = ctx
+		databaseSingleton.connectToDb()
+		databaseSingleton.applySchema(schema)
+		databaseSingleton.Connection.Close()
+		databaseSingleton.Connection = nil
+		databaseSingleton.DgraphClient = nil
+	}
 
-	if firstConnection {
-		return applySchema(dgraphClient, ctx) // Sincroniza esquema por primera vez (BORRA TODOS LOS DATOS)
-	} else {
-		if newDate {
-			dropData(dgraphClient, ctx) // Nueva fecha sincronizada, elimina datos anteriores
-		}
-		return dbOp(dgraphClient, ctx, opData) // Mutation o Query
+	return databaseSingleton
+
+}
+
+func (db *DatabaseConnection) connectToDb() {
+
+	if db.Connection == nil {
+		DGRAPH_ENDPOINT := os.Getenv("DGRAPH_ENDPOINT")
+		dialOpts := append([]grpc.DialOption{}, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+		conn, connError := grpc.Dial(DGRAPH_ENDPOINT, dialOpts...)
+		errorHandler(connError)
+
+		dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(conn))
+
+		db.Connection = conn
+		db.DgraphClient = dgraphClient
 	}
 
 }
 
-func applySchema(dgraphClient *dgo.Dgraph, ctx context.Context) []byte {
-	// Operation object:
+func (db *DatabaseConnection) applySchema(schema string) {
+
+	// Limpiar la DB por primera vez:
 	operationObject := &api.Operation{
 		DropOp: api.Operation_ALL,
 	}
 	// Ejecución de operación:
-	operationError := dgraphClient.Alter(ctx, operationObject)
+	operationError := db.DgraphClient.Alter(db.Context, operationObject)
 	errorHandler(operationError)
 	// Schema object:
 	schemaObject := &api.Operation{
-		Schema: schemaObject,
+		Schema: schema,
 	}
 	// Ejecución de operación:
-	schemaError := dgraphClient.Alter(ctx, schemaObject)
+	schemaError := db.DgraphClient.Alter(db.Context, schemaObject)
 	errorHandler(schemaError)
 
-	return []byte("done")
 }
 
-func dropData(dgraphClient *dgo.Dgraph, ctx context.Context) []byte {
+func (db *DatabaseConnection) DropData() {
+
 	// Operation object:
 	operationObject := &api.Operation{
 		DropOp: api.Operation_DATA,
 	}
 	// Ejecución de operación:
-	operationError := dgraphClient.Alter(ctx, operationObject)
+	operationError := db.DgraphClient.Alter(db.Context, operationObject)
 	errorHandler(operationError)
 
-	return []byte("done")
 }
 
-func applyMutation(dgraphClient *dgo.Dgraph, ctx context.Context, opData []byte) []byte {
-	txn := dgraphClient.NewTxn()
+func (db *DatabaseConnection) BulkJsonMutation(transactionsList []byte) {
+
+	db.connectToDb()
+
+	txn := db.DgraphClient.NewTxn()
 	// Mutation object:
 	mutationObject := &api.Mutation{
-		SetJson: opData,
+		SetJson: transactionsList,
 	}
 	// Ejecución de mutation:
-	_, mutationError := txn.Mutate(ctx, mutationObject)
+	_, mutationError := txn.Mutate(db.Context, mutationObject)
 	if mutationError != nil {
-		txn.Discard(ctx)
+		txn.Discard(db.Context)
 		errorHandler(mutationError)
 	}
 	// Commit de la transacción:
-	commitError := txn.Commit(ctx)
+	commitError := txn.Commit(db.Context)
 	if commitError != nil {
-		txn.Discard(ctx)
+		txn.Discard(db.Context)
 		errorHandler(commitError)
 	}
 
-	return []byte("done")
+	db.Connection.Close()
+	db.Connection = nil
+	db.DgraphClient = nil
+
 }
 
-func getQuery(dgraphClient *dgo.Dgraph, ctx context.Context, opData []byte) []byte {
-	txn := dgraphClient.NewTxn()
+func (db *DatabaseConnection) GetQuery(query string) []byte {
 
-	queryResponse, queryError := txn.Query(ctx, string(opData))
+	db.connectToDb()
+
+	txn := db.DgraphClient.NewTxn()
+
+	queryResponse, queryError := txn.Query(db.Context, query)
 	errorHandler(queryError)
 
 	queryJson := queryResponse.GetJson()
+
+	db.Connection.Close()
+	db.Connection = nil
+	db.DgraphClient = nil
+
+	return queryJson
+
+}
+
+func (db *DatabaseConnection) GetQueryWithVariables(query string, vars map[string]string) []byte {
+
+	db.connectToDb()
+
+	txn := db.DgraphClient.NewTxn()
+
+	queryResponse, queryError := txn.QueryWithVars(db.Context, query, vars)
+	errorHandler(queryError)
+
+	queryJson := queryResponse.GetJson()
+
+	db.Connection.Close()
+	db.Connection = nil
+	db.DgraphClient = nil
 
 	return queryJson
 

@@ -8,9 +8,10 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-func fetchProducts(date int64, productsChannel chan<- map[string]*Product) {
+func fetchProducts(date int64, productsChannel chan<- map[string]*Product, productsToDbChannel chan<- []*Product) {
 
 	responseProducts := genericFetch("products", date)
 
@@ -23,6 +24,7 @@ func fetchProducts(date int64, productsChannel chan<- map[string]*Product) {
 	errorHandler(errProductsData)
 
 	productsDataProcessed := make(map[string]*Product)
+	var productsToDb []*Product
 
 	for _, product := range productsData {
 		// Conversión del precio del producto a int
@@ -36,14 +38,18 @@ func fetchProducts(date int64, productsChannel chan<- map[string]*Product) {
 		newProduct.Price = dollarPrice
 		newProduct.DType = "Product"
 		productsDataProcessed[newProduct.Id] = newProduct
+		productsToDb = append(productsToDb, newProduct)
 	}
 
+	productsToDbChannel <- productsToDb
+	close(productsToDbChannel)
+	productsChannel <- productsDataProcessed
 	productsChannel <- productsDataProcessed
 	close(productsChannel)
 
 }
 
-func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, transactionsChannel chan<- map[string][]*Transaction) {
+func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, transactionsChannel chan<- map[string][]*Transaction, originsChannel chan<- map[string]*Origin, originsToDbChannel chan<- []*Origin) {
 
 	responseTransactions := genericFetch("transactions", date)
 
@@ -53,6 +59,7 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 	// Creación de mapas para structs
 	transactionsDataProcessed := make(map[string][]*Transaction)
 	originsMap := make(map[string]*Origin)
+	var originsToDb []*Origin
 
 	productsMap := <-productsChannel
 
@@ -102,6 +109,7 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 					newOrigin.Ip = currentIp
 					newOrigin.DType = "Origin"
 					originsMap[currentIp] = newOrigin
+					originsToDb = append(originsToDb, newOrigin)
 					newTransaction.Origin = newOrigin
 				}
 			case 3:
@@ -135,6 +143,10 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 
 	}
 
+	originsToDbChannel <- originsToDb
+	close(originsToDbChannel)
+	originsChannel <- originsMap
+	close(originsChannel)
 	transactionsChannel <- transactionsDataProcessed
 	close(transactionsChannel)
 
@@ -166,15 +178,52 @@ func fetchBuyers(date int64, transactionsChannel <-chan map[string][]*Transactio
 
 }
 
-func fetchDayData(date int64) []*Buyer {
+func fetchDayData(date int64, queryProducts string, queryOrigins string) []*Buyer {
 
 	productsChannel := make(chan map[string]*Product)
+	productsToDbChannel := make(chan []*Product)
+	productsFromDbChannel := make(chan *ProductQuery)
 	transactionsChannel := make(chan map[string][]*Transaction)
+	originsChannel := make(chan map[string]*Origin)
+	originsToDbChannel := make(chan []*Origin)
+	originsFromDbChannel := make(chan *OriginQuery)
 	buyersChannel := make(chan []*Buyer)
 
-	go fetchProducts(date, productsChannel)
-	go fetchTransactions(date, productsChannel, transactionsChannel)
+	go fetchProducts(date, productsChannel, productsToDbChannel)
+	go initialProductsOperation(queryProducts, productsToDbChannel, productsFromDbChannel)
+	go fetchTransactions(date, productsChannel, transactionsChannel, originsChannel, originsToDbChannel)
+	go initialOriginsOperation(queryOrigins, originsToDbChannel, originsFromDbChannel)
 	go fetchBuyers(date, transactionsChannel, buyersChannel)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(productsFromDbChannel chan *ProductQuery, productsChannel chan map[string]*Product) {
+
+		defer wg.Done()
+		productsWithUid := <-productsFromDbChannel
+		productsMap := <-productsChannel
+
+		for _, product := range productsWithUid.Q {
+			foundProduct := productsMap[product.Id]
+			foundProduct.Uid = product.Uid
+		}
+
+	}(productsFromDbChannel, productsChannel)
+
+	wg.Add(1)
+	go func(originsFromDbChannel chan *OriginQuery, originsChannel chan map[string]*Origin) {
+
+		defer wg.Done()
+		originsWithUid := <-originsFromDbChannel
+		originsMap := <-originsChannel
+
+		for _, origin := range originsWithUid.Q {
+			foundOrigin := originsMap[origin.Ip]
+			foundOrigin.Uid = origin.Uid
+		}
+
+	}(originsFromDbChannel, originsChannel)
 
 	dayDataProcessed := <-buyersChannel
 

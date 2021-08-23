@@ -13,33 +13,24 @@ func main() {
 	dotenvError := godotenv.Load()
 	errorHandler(dotenvError)
 
-	// Primera conexión -> Carga Schema:
-	connectToDb(true, false, nil, nil)
+	// Inicio DB:
+	startDb(schemaObject)
 
 	todayUnix := time.Now().Unix() // Default date
 	// Tenemos una fecha y traemos la data de las API externas:
-	todayData := fetchDayData(todayUnix)
-	// Data lista para enviar:
-	jsonForDb := jsoniterMarshall(todayData, "dgraph")
+	todayData := fetchDayData(todayUnix, queryProducts, queryOrigins)
 
-	fmt.Println(string(jsonForDb))
+	addDayData(todayData)
 
-	// // Envío de la data -> Mutation:
-	// connectToDb(false, true, applyMutation, jsonForDb)
+	fmt.Println("UPLOAD finished...")
 
-	// fmt.Println("UPLOAD finished...")
+	allBuyers := getAllBuyers(queryAllBuyers)
+	fmt.Println(string(jsoniterMarshall(allBuyers.Q, "dgraph")))
 
-	// Consulta de la data -> Query:
-	// queryJson := connectToDb(false, false, getQuery, []byte(queryAllBuyers))
-
-	// var queryResults struct {
-	// 	Q []Buyer
-	// }
-
-	// jsoniterUnmarshall(queryJson, &queryResults, "dgraph")
-
-	// for idx, buyer := range queryResults.Q {
-	// 	fmt.Printf("%d. Id: %s, Name: %s, Age: %d\n", idx+1, buyer.Id, buyer.Name, buyer.Age)
-	// }
+	vars := map[string]string{"$id": "2b85fd40"}
+	buyerData := getBuyerById(queryBuyerById, vars)
+	fmt.Println(string(jsoniterMarshall(buyerData.Owner, "dgraph")))
+	fmt.Println(string(jsoniterMarshall(buyerData.OtherBuyers, "dgraph")))
+	fmt.Println(string(jsoniterMarshall(buyerData.OtherProducts, "dgraph")))
 
 }
