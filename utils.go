@@ -9,29 +9,34 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-func errorHandler(err error) {
+func panicErrorHandler(err error) {
+
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Panic(err.Error())
 	}
+
 }
 
 func genericFetch(slug string, date int64) *http.Response {
-	API_URL := os.Getenv("API_URL")
-	fixedApiURL := fmt.Sprintf("%s/%s?date=%d", API_URL, slug, date)
-	apiResponse, errResponse := http.Get(fixedApiURL)
-	errorHandler(errResponse)
-	return apiResponse
+
+	fixedApiURL := fmt.Sprintf("%s/%s?date=%d", os.Getenv("API_URL"), slug, date)
+	response, httpError := http.Get(fixedApiURL)
+	panicErrorHandler(httpError)
+
+	return response
+
 }
 
-func jsoniterMarshall(v interface{}, tagKey string) []byte {
+func jsoniterMarshall(v interface{}, tagKey string) ([]byte, error) {
+
 	marshaller := jsoniter.Config{TagKey: tagKey}.Froze()
-	bytes, marshallError := marshaller.Marshal(v)
-	errorHandler(marshallError)
-	return bytes
+	return marshaller.Marshal(v)
+
 }
 
-func jsoniterUnmarshall(data []byte, v interface{}, tagKey string) {
+func jsoniterUnmarshall(data []byte, v interface{}, tagKey string) error {
+
 	unmarshaller := jsoniter.Config{TagKey: tagKey}.Froze()
-	unmarshallError := unmarshaller.Unmarshal(data, v)
-	errorHandler(unmarshallError)
+	return unmarshaller.Unmarshal(data, v)
+
 }

@@ -6,38 +6,48 @@ func startDb(schema string) {
 	dbInstance = CreateDatabase(schema)
 }
 
-func prepareNewDate() {
-	dbInstance.DropData()
+func prepareNewDate() error {
+	return dbInstance.DropData()
 }
 
+// Para crear cada producto una única vez en la DB:
 func initialProductsOperation(query string, productsToDbChannel <-chan []*Product, productsFromDbChannel chan<- *ProductQuery) {
 
 	productsToDb := <-productsToDbChannel
 
-	productsJson := jsoniterMarshall(productsToDb, "dgraph")
+	productsJson, marshallError := jsoniterMarshall(productsToDb, "dgraph")
+	panicErrorHandler(marshallError)
+
 	dbInstance.BulkJsonMutation(productsJson)
 
-	queryJson := dbInstance.GetQuery(query)
+	queryJson, queryError := dbInstance.GetQuery(query)
+	panicErrorHandler(queryError)
 
 	queryResult := new(ProductQuery)
-	jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	panicErrorHandler(unmarshallError)
 
 	productsFromDbChannel <- queryResult
 	close(productsFromDbChannel)
 
 }
 
+// Para crear cada origen (device + ip) una única vez en la DB:
 func initialOriginsOperation(query string, originsToDbChannel <-chan []*Origin, originsFromDbChannel chan<- *OriginQuery) {
 
 	originsToDb := <-originsToDbChannel
 
-	originsJson := jsoniterMarshall(originsToDb, "dgraph")
+	originsJson, marshallError := jsoniterMarshall(originsToDb, "dgraph")
+	panicErrorHandler(marshallError)
+
 	dbInstance.BulkJsonMutation(originsJson)
 
-	queryJson := dbInstance.GetQuery(query)
+	queryJson, queryError := dbInstance.GetQuery(query)
+	panicErrorHandler(queryError)
 
 	queryResult := new(OriginQuery)
-	jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	panicErrorHandler(unmarshallError)
 
 	originsFromDbChannel <- queryResult
 	close(originsFromDbChannel)
@@ -46,29 +56,53 @@ func initialOriginsOperation(query string, originsToDbChannel <-chan []*Origin, 
 
 func addDayData(dayData []*Buyer) {
 
-	dayDataJson := jsoniterMarshall(dayData, "dgraph")
+	dayDataJson, marshallError := jsoniterMarshall(dayData, "dgraph")
+	panicErrorHandler(marshallError)
+
 	dbInstance.BulkJsonMutation(dayDataJson)
 
 }
 
-func getAllBuyers(query string) *AllBuyersQuery {
+func getAllBuyers(query string) ([]byte, *AllBuyersQuery, error) {
 
-	queryJson := dbInstance.GetQuery(query)
+	queryJson, queryError := dbInstance.GetQuery(query)
+	if queryError != nil {
+		return nil, nil, queryError
+	}
 
 	queryResult := new(AllBuyersQuery)
-	jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	if unmarshallError != nil {
+		return nil, nil, unmarshallError
+	}
 
-	return queryResult
+	// Fecha sincronizada no tiene compradores...
+	if len(queryResult.Q) == 0 {
+		return nil, nil, nil
+	}
+
+	return queryJson, queryResult, nil
 
 }
 
-func getBuyerById(query string, vars map[string]string) *BuyerQuery {
+func getBuyerById(query string, vars map[string]string) ([]byte, *BuyerQuery, error) {
 
-	queryJson := dbInstance.GetQueryWithVariables(query, vars)
+	queryJson, queryError := dbInstance.GetQueryWithVariables(query, vars)
+	if queryError != nil {
+		return nil, nil, queryError
+	}
 
 	queryResult := new(BuyerQuery)
-	jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	if unmarshallError != nil {
+		return nil, nil, unmarshallError
+	}
 
-	return queryResult
+	// ID no existe...
+	if len(queryResult.Owner) == 0 {
+		return nil, nil, nil
+	}
+
+	return queryJson, queryResult, nil
 
 }

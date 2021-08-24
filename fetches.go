@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/csv"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +13,7 @@ import (
 func fetchProducts(date int64, productsChannel chan<- map[string]*Product, productsToDbChannel chan<- []*Product) {
 
 	responseProducts := genericFetch("products", date)
+	defer responseProducts.Body.Close()
 
 	// Creación de reader con csv para leer csv
 	csvReader := csv.NewReader(responseProducts.Body)
@@ -21,15 +21,15 @@ func fetchProducts(date int64, productsChannel chan<- map[string]*Product, produ
 	csvReader.Comma = '\''
 	// Uso de ReadAll para leer todo el csv (se necesita todo)
 	productsData, errProductsData := csvReader.ReadAll()
-	errorHandler(errProductsData)
+	panicErrorHandler(errProductsData)
 
 	productsDataProcessed := make(map[string]*Product)
 	var productsToDb []*Product
 
 	for _, product := range productsData {
 		// Conversión del precio del producto a int
-		numPrice, errnumPrice := strconv.Atoi(product[2])
-		errorHandler(errnumPrice)
+		numPrice, errNumPrice := strconv.Atoi(product[2])
+		panicErrorHandler(errNumPrice)
 		// Conversión del precio del producto en centavos a dólares
 		var dollarPrice float32 = float32(numPrice) / 100
 		newProduct := new(Product)
@@ -52,12 +52,14 @@ func fetchProducts(date int64, productsChannel chan<- map[string]*Product, produ
 func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, transactionsChannel chan<- map[string][]*Transaction, originsChannel chan<- map[string]*Origin, originsToDbChannel chan<- []*Origin) {
 
 	responseTransactions := genericFetch("transactions", date)
+	defer responseTransactions.Body.Close()
 
 	// Creación de reader con bufio para leer por bytes
 	transactionsReader := bufio.NewReader(responseTransactions.Body)
 
 	// Creación de mapas para structs
 	transactionsDataProcessed := make(map[string][]*Transaction)
+	transactionsMap := make(map[string]*Transaction)
 	originsMap := make(map[string]*Origin)
 	var originsToDb []*Origin
 
@@ -83,7 +85,7 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 					loopFlag = true
 					break
 				} else {
-					log.Fatal(errTransactionBytes.Error())
+					panicErrorHandler(errTransactionBytes)
 				}
 			}
 
@@ -139,7 +141,11 @@ func fetchTransactions(date int64, productsChannel <-chan map[string]*Product, t
 
 		// Agrega la transacción al map de Transactions
 		newTransaction.DType = "Transaction"
-		transactionsDataProcessed[mapKey] = append(transactionsDataProcessed[mapKey], newTransaction)
+		_, exists := transactionsMap[newTransaction.Id] // Evitando duplicados...
+		if !exists {
+			transactionsMap[newTransaction.Id] = newTransaction
+			transactionsDataProcessed[mapKey] = append(transactionsDataProcessed[mapKey], newTransaction)
+		}
 
 	}
 
@@ -156,15 +162,31 @@ func fetchBuyers(date int64, transactionsChannel <-chan map[string][]*Transactio
 
 	responseBuyers := genericFetch("buyers", date)
 
+	defer responseBuyers.Body.Close()
+
 	// Uso de ReadAll para leer todo el Body del http.Get (se necesita todo)
 	buyersData, errBuyersData := io.ReadAll(responseBuyers.Body)
-	errorHandler(errBuyersData)
+	panicErrorHandler(errBuyersData)
 
 	var buyersDataProcessed []*Buyer
-	jsoniterUnmarshall(buyersData, &buyersDataProcessed, "external")
+	unmarshallError := jsoniterUnmarshall(buyersData, &buyersDataProcessed, "external")
+	panicErrorHandler(unmarshallError)
+
+	// Quitando duplicados de la data recibida y parseada...
+	buyersMap := make(map[string]*Buyer)
+	for _, buyer := range buyersDataProcessed {
+		_, exists := buyersMap[buyer.Id]
+		if !exists {
+			buyersMap[buyer.Id] = buyer
+		}
+	}
+	buyersDataProcessed = nil
+	for _, buyer := range buyersMap {
+		buyersDataProcessed = append(buyersDataProcessed, buyer)
+	}
 
 	transactionsMap := <-transactionsChannel
-
+	// Cruzando transacciones con sus compradores:
 	for _, buyer := range buyersDataProcessed {
 		buyer.DType = "Buyer"
 		foundTransactions, exist := transactionsMap[buyer.Id]

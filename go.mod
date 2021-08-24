@@ -6,6 +6,7 @@ require (
 	github.com/dgraph-io/dgo v1.0.0 // indirect
 	github.com/dgraph-io/dgo/v200 v200.0.0-20210401091508-95bfd74de60e // indirect
 	github.com/dgraph-io/dgo/v210 v210.0.0-20210421093152-78a2fece3ebd // indirect
+	github.com/go-chi/chi/v5 v5.0.3 // indirect
 	github.com/joho/godotenv v1.3.0 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

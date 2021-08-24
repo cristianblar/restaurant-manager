@@ -1,5 +1,9 @@
 package main
 
+const currentDomain string = "http://localhost:3000"
+
+const httpErrorMessage = "Something went wrong... Please, try again"
+
 const schemaObject string = `
 	type Product {
 		Product.id
@@ -57,17 +61,15 @@ const queryOrigins string = `
 `
 
 const queryAllBuyers string = `
-		{
-		q(func: type(Buyer)) @filter(has(Buyer.transactions)){
+	query q(){
+		var(func: type(Buyer)) @filter(has(Buyer.transactions)){
+			numTransactions as count(Buyer.transactions)
+		}
+		q(func: type(Buyer), orderdesc: val(numTransactions)) @filter(has(Buyer.transactions)){
 			Buyer.id
 			Buyer.name
 			Buyer.age
-      Buyer.transactions{
-				Transaction.id
-				Transaction.products{
-					Product.price
-				}
-			}
+			Buyer.transactionsAmount: val(numTransactions)
 		}
 	}
 `
