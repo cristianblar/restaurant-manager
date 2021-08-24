@@ -1,35 +1,4 @@
-package main
-
-import (
-	"context"
-
-	dgo "github.com/dgraph-io/dgo/v210"
-	"github.com/go-chi/chi/v5"
-	"google.golang.org/grpc"
-)
-
-// Database
-
-type DatabaseConnection struct {
-	Connection   *grpc.ClientConn
-	DgraphClient *dgo.Dgraph
-	Context      context.Context
-}
-
-// Web server
-
-type Pagination struct {
-	TotalResults int     `dgraph:"Buyers.total,omitempty"`
-	TotalPages   int     `dgraph:"Pages.total,omitempty"`
-	PreviousPage string  `dgraph:"Page.previous,omitempty"`
-	NextPage     string  `dgraph:"Page.next,omitempty"`
-	Results      []Buyer `dgraph:"results,omitempty"`
-}
-
-type Server struct {
-	Port   string
-	Router *chi.Mux
-}
+package lib
 
 // Queries
 

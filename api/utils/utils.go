@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-func panicErrorHandler(err error) {
+func PanicErrorHandler(err error) {
 
 	if err != nil {
 		log.Panic(err.Error())
@@ -17,24 +17,24 @@ func panicErrorHandler(err error) {
 
 }
 
-func genericFetch(slug string, date int64) *http.Response {
+func GenericFetch(slug string, date int64) *http.Response {
 
 	fixedApiURL := fmt.Sprintf("%s/%s?date=%d", os.Getenv("API_URL"), slug, date)
 	response, httpError := http.Get(fixedApiURL)
-	panicErrorHandler(httpError)
+	PanicErrorHandler(httpError)
 
 	return response
 
 }
 
-func jsoniterMarshall(v interface{}, tagKey string) ([]byte, error) {
+func JsoniterMarshall(v interface{}, tagKey string) ([]byte, error) {
 
 	marshaller := jsoniter.Config{TagKey: tagKey}.Froze()
 	return marshaller.Marshal(v)
 
 }
 
-func jsoniterUnmarshall(data []byte, v interface{}, tagKey string) error {
+func JsoniterUnmarshall(data []byte, v interface{}, tagKey string) error {
 
 	unmarshaller := jsoniter.Config{TagKey: tagKey}.Froze()
 	return unmarshaller.Unmarshal(data, v)

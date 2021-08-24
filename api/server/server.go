@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"log"
@@ -6,13 +6,20 @@ import (
 	"os"
 	"time"
 
+	"github.com/cristianblar/restaurant-manager/api/lib"
+	"github.com/cristianblar/restaurant-manager/api/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+type Server struct {
+	Port   string
+	Router *chi.Mux
+}
+
 func CreateServer() *Server {
 
-	startDb(schemaObject)
+	lib.StartDb(schemaObject)
 
 	return &Server{
 		Port:   os.Getenv("API_PORT"),
@@ -25,8 +32,8 @@ func (s *Server) Listen() {
 
 	// Primera carga de hoy por default:
 	todayDate := time.Now().Unix()
-	dateData := fetchDayData(todayDate, queryProducts, queryOrigins)
-	addDayData(dateData)
+	dateData := lib.FetchDayData(todayDate, queryProducts, queryOrigins)
+	lib.AddDayData(dateData)
 
 	log.Println("Default data uploaded -> Server ready to start")
 
@@ -37,6 +44,6 @@ func (s *Server) Listen() {
 	mainRouter.Get("/", HandleRoot)
 
 	serverError := http.ListenAndServe(s.Port, mainRouter)
-	panicErrorHandler(serverError)
+	utils.PanicErrorHandler(serverError)
 
 }

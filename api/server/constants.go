@@ -1,4 +1,4 @@
-package main
+package server
 
 const currentDomain string = "http://localhost:3000"
 

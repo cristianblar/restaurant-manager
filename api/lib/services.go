@@ -1,12 +1,17 @@
-package main
+package lib
 
-var dbInstance *DatabaseConnection = nil
+import (
+	"github.com/cristianblar/restaurant-manager/api/database"
+	"github.com/cristianblar/restaurant-manager/api/utils"
+)
 
-func startDb(schema string) {
-	dbInstance = CreateDatabase(schema)
+var dbInstance *database.DatabaseConnection = nil
+
+func StartDb(schema string) {
+	dbInstance = database.CreateDatabase(schema)
 }
 
-func prepareNewDate() error {
+func PrepareNewDate() error {
 	return dbInstance.DropData()
 }
 
@@ -15,17 +20,17 @@ func initialProductsOperation(query string, productsToDbChannel <-chan []*Produc
 
 	productsToDb := <-productsToDbChannel
 
-	productsJson, marshallError := jsoniterMarshall(productsToDb, "dgraph")
-	panicErrorHandler(marshallError)
+	productsJson, marshallError := utils.JsoniterMarshall(productsToDb, "dgraph")
+	utils.PanicErrorHandler(marshallError)
 
 	dbInstance.BulkJsonMutation(productsJson)
 
 	queryJson, queryError := dbInstance.GetQuery(query)
-	panicErrorHandler(queryError)
+	utils.PanicErrorHandler(queryError)
 
 	queryResult := new(ProductQuery)
-	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
-	panicErrorHandler(unmarshallError)
+	unmarshallError := utils.JsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	utils.PanicErrorHandler(unmarshallError)
 
 	productsFromDbChannel <- queryResult
 	close(productsFromDbChannel)
@@ -37,33 +42,33 @@ func initialOriginsOperation(query string, originsToDbChannel <-chan []*Origin, 
 
 	originsToDb := <-originsToDbChannel
 
-	originsJson, marshallError := jsoniterMarshall(originsToDb, "dgraph")
-	panicErrorHandler(marshallError)
+	originsJson, marshallError := utils.JsoniterMarshall(originsToDb, "dgraph")
+	utils.PanicErrorHandler(marshallError)
 
 	dbInstance.BulkJsonMutation(originsJson)
 
 	queryJson, queryError := dbInstance.GetQuery(query)
-	panicErrorHandler(queryError)
+	utils.PanicErrorHandler(queryError)
 
 	queryResult := new(OriginQuery)
-	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
-	panicErrorHandler(unmarshallError)
+	unmarshallError := utils.JsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	utils.PanicErrorHandler(unmarshallError)
 
 	originsFromDbChannel <- queryResult
 	close(originsFromDbChannel)
 
 }
 
-func addDayData(dayData []*Buyer) {
+func AddDayData(dayData []*Buyer) {
 
-	dayDataJson, marshallError := jsoniterMarshall(dayData, "dgraph")
-	panicErrorHandler(marshallError)
+	dayDataJson, marshallError := utils.JsoniterMarshall(dayData, "dgraph")
+	utils.PanicErrorHandler(marshallError)
 
 	dbInstance.BulkJsonMutation(dayDataJson)
 
 }
 
-func getAllBuyers(query string) ([]byte, *AllBuyersQuery, error) {
+func GetAllBuyers(query string) ([]byte, *AllBuyersQuery, error) {
 
 	queryJson, queryError := dbInstance.GetQuery(query)
 	if queryError != nil {
@@ -71,7 +76,7 @@ func getAllBuyers(query string) ([]byte, *AllBuyersQuery, error) {
 	}
 
 	queryResult := new(AllBuyersQuery)
-	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	unmarshallError := utils.JsoniterUnmarshall(queryJson, queryResult, "dgraph")
 	if unmarshallError != nil {
 		return nil, nil, unmarshallError
 	}
@@ -85,7 +90,7 @@ func getAllBuyers(query string) ([]byte, *AllBuyersQuery, error) {
 
 }
 
-func getBuyerById(query string, vars map[string]string) ([]byte, *BuyerQuery, error) {
+func GetBuyerById(query string, vars map[string]string) ([]byte, *BuyerQuery, error) {
 
 	queryJson, queryError := dbInstance.GetQueryWithVariables(query, vars)
 	if queryError != nil {
@@ -93,7 +98,7 @@ func getBuyerById(query string, vars map[string]string) ([]byte, *BuyerQuery, er
 	}
 
 	queryResult := new(BuyerQuery)
-	unmarshallError := jsoniterUnmarshall(queryJson, queryResult, "dgraph")
+	unmarshallError := utils.JsoniterUnmarshall(queryJson, queryResult, "dgraph")
 	if unmarshallError != nil {
 		return nil, nil, unmarshallError
 	}

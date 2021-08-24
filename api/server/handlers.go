@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -8,8 +8,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cristianblar/restaurant-manager/api/lib"
+	"github.com/cristianblar/restaurant-manager/api/utils"
 	"github.com/go-chi/chi/v5"
 )
+
+type Pagination struct {
+	TotalResults int         `dgraph:"Buyers.total,omitempty"`
+	TotalPages   int         `dgraph:"Pages.total,omitempty"`
+	PreviousPage string      `dgraph:"Page.previous,omitempty"`
+	NextPage     string      `dgraph:"Page.next,omitempty"`
+	Results      []lib.Buyer `dgraph:"results,omitempty"`
+}
 
 var currentDate string = time.Now().String()[0:10]
 
@@ -39,7 +49,7 @@ func HandleLoadData(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusBadRequest)
 			response = []byte(`{ "result": "Date already synced" }`)
 		} else {
-			cleanError := prepareNewDate()
+			cleanError := lib.PrepareNewDate()
 			if cleanError != nil {
 				log.Println(cleanError.Error())
 				http.Error(res, httpErrorMessage, http.StatusInternalServerError)
@@ -47,8 +57,8 @@ func HandleLoadData(res http.ResponseWriter, req *http.Request) {
 			}
 			res.Header().Set("Content-Type", "application/json")
 			currentDate = time.Unix(requestedDate, 0).String()[0:10]
-			newData := fetchDayData(requestedDate, queryProducts, queryOrigins)
-			addDayData(newData)
+			newData := lib.FetchDayData(requestedDate, queryProducts, queryOrigins)
+			lib.AddDayData(newData)
 			res.WriteHeader(http.StatusOK)
 			response = []byte(`{ "result": "Data synced" }`)
 		}
@@ -75,7 +85,7 @@ func HandleAllBuyers(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	_, queryResult, queryError := getAllBuyers(queryAllBuyers)
+	_, queryResult, queryError := lib.GetAllBuyers(queryAllBuyers)
 	if queryError != nil {
 		log.Println(queryError.Error())
 		http.Error(res, httpErrorMessage, http.StatusInternalServerError)
@@ -121,7 +131,7 @@ func HandleAllBuyers(res http.ResponseWriter, req *http.Request) {
 			NextPage:     nextPage,
 			Results:      queryResult.Q[sliceLeft:sliceRight],
 		}
-		jsonToSend, marshallError := jsoniterMarshall(pagination, "dgraph")
+		jsonToSend, marshallError := utils.JsoniterMarshall(pagination, "dgraph")
 		if marshallError != nil {
 			log.Println(marshallError.Error())
 			http.Error(res, httpErrorMessage, http.StatusInternalServerError)
@@ -139,7 +149,7 @@ func HandleBuyerId(res http.ResponseWriter, req *http.Request) {
 	buyerId := chi.URLParam(req, "buyerId")
 
 	vars := map[string]string{"$id": buyerId}
-	jsonResult, _, queryError := getBuyerById(queryBuyerById, vars)
+	jsonResult, _, queryError := lib.GetBuyerById(queryBuyerById, vars)
 	if queryError != nil {
 		log.Println(queryError.Error())
 		http.Error(res, httpErrorMessage, http.StatusInternalServerError)

@@ -1,10 +1,11 @@
-package main
+package database
 
 import (
 	"context"
 	"log"
 	"os"
 
+	"github.com/cristianblar/restaurant-manager/api/utils"
 	dgo "github.com/dgraph-io/dgo/v210"
 	"github.com/dgraph-io/dgo/v210/protos/api"
 	"google.golang.org/grpc"
@@ -37,7 +38,7 @@ func (db *DatabaseConnection) connectToDb() {
 		DGRAPH_ENDPOINT := os.Getenv("DGRAPH_ENDPOINT")
 		dialOpts := append([]grpc.DialOption{}, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 		conn, connError := grpc.Dial(DGRAPH_ENDPOINT, dialOpts...)
-		panicErrorHandler(connError)
+		utils.PanicErrorHandler(connError)
 
 		dgraphClient := dgo.NewDgraphClient(api.NewDgraphClient(conn))
 
@@ -63,14 +64,14 @@ func (db *DatabaseConnection) applySchema(schema string) {
 	}
 	// Ejecución de operación:
 	operationError := db.DgraphClient.Alter(db.Context, operationObject)
-	panicErrorHandler(operationError)
+	utils.PanicErrorHandler(operationError)
 	// Schema object:
 	schemaObject := &api.Operation{
 		Schema: schema,
 	}
 	// Ejecución de operación:
 	schemaError := db.DgraphClient.Alter(db.Context, schemaObject)
-	panicErrorHandler(schemaError)
+	utils.PanicErrorHandler(schemaError)
 
 }
 
