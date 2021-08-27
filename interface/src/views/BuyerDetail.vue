@@ -6,7 +6,7 @@
       link="/buyers"
       message="The ID doesn't exist or the buyer doesn't have transactions for the synced date"
     />
-    <Loader v-else-if="loading"/>
+    <Loader v-else-if="loading" />
     <div v-else class="main-container">
       <BuyerProfile
         :name="buyerInfo.owner[0]['Buyer.name']"
@@ -16,12 +16,8 @@
       <BuyerTransactions
         :transactions="buyerInfo.owner[0]['Buyer.transactions']"
       />
-      <BuyerProducts
-        :products="filteredRecommendedProducts"
-      />
-      <BuyerIps
-        :other-buyers="filteredOtherBuyers"
-      />
+      <BuyerProducts :products="filteredRecommendedProducts" />
+      <BuyerIps :other-buyers="filteredOtherBuyers" />
     </div>
   </main>
 </template>
@@ -84,29 +80,38 @@ export default {
       return Array.from(buyersMap.values())
     }
   },
-  created () {
-    if (this.syncedData) {
-      this.error = false
-      this.loading = true
-      fetchData(`buyers/${this.$route.params.id}`)
-        .then(jsonResponse => {
-          this.buyerInfo = jsonResponse
-          this.loading = false
-        })
-        .catch(() => {
-          this.loading = false
-          this.error = true
-        })
+  methods: {
+    fetchBuyer () {
+      if (this.syncedData) {
+        this.error = false
+        this.loading = true
+        fetchData(`buyers/${this.$route.params.id}`)
+          .then(jsonResponse => {
+            this.buyerInfo = jsonResponse
+            this.loading = false
+          })
+          .catch(() => {
+            this.loading = false
+            this.error = true
+          })
+      }
     }
+  },
+  watch: {
+    $route () {
+      this.fetchBuyer()
+    }
+  },
+  created () {
+    this.fetchBuyer()
   }
 }
 </script>
 
 <style lang="sass" scoped>
 
-.main-container
-  margin: 0 auto
-  padding-bottom: 36px
-  width: 90%
-
+  .main-container
+    margin: 0 auto
+    padding-bottom: 36px
+    width: 90%
 </style>

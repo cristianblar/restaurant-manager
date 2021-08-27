@@ -49,7 +49,7 @@ export default {
     },
     async syncData () {
       const unixTimestamp = new Date(this.date).getTime() / 1000
-      const result = await fetch(`${API_URL}/api/load-data?date=${unixTimestamp}`)
+      const result = await fetch(`${API_URL}/load-data?date=${unixTimestamp}`)
       if (!result.ok) {
         const jsonResult = await result.json()
         if (jsonResult.result === 'Date already synced') return 'current'
