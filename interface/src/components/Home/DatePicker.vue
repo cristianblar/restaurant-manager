@@ -11,7 +11,7 @@
         @input="dateChange"
         :show-current="false"
         :max="(new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().substr(0, 10)"
-      ></v-date-picker>
+      />
     </v-row>
   </div>
 </template>

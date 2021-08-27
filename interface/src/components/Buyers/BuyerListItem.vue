@@ -1,5 +1,5 @@
 <template>
-  <div class="buyer-container">
+  <article class="buyer-container">
     <router-link :to="`/buyers/${buyerId}`">
       <h4>{{ name }} ({{ buyerId }})</h4>
     </router-link>
@@ -7,7 +7,7 @@
     <span>
       <span class="tran-number">{{ transactions }}</span> transactions
     </span>
-  </div>
+  </article>
 </template>
 
 <script>
@@ -54,6 +54,7 @@ export default {
     background-color: #FFC933
     box-shadow: 0 6px 8px -4px #00000080, 5px 5px 15px 5px rgb(0 0 0 / 0%)
     color: #190862
+
     & a h4
       color: #190862
       text-decoration: underline

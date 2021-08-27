@@ -1,8 +1,8 @@
 <template>
-  <div class="main-container">
+  <section class="main-container">
     <h2>{{ message }}</h2>
     <router-link class="back-link" :to="link">{{ linkText }}</router-link>
-  </div>
+  </section>
 </template>
 
 <script>

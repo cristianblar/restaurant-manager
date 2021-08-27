@@ -1,42 +1,42 @@
 <template>
-  <div>
+  <main>
     <UpperErrorMessage
       v-if="error"
       link-text="Go to buyers' list"
       link="/buyers"
       message="The ID doesn't exist or the buyer doesn't have transactions for the synced date"
-    ></UpperErrorMessage>
-    <Loader v-else-if="loading"></Loader>
+    />
+    <Loader v-else-if="loading"/>
     <div v-else class="main-container">
       <BuyerProfile
         :name="buyerInfo.owner[0]['Buyer.name']"
         :buyer-id="buyerInfo.owner[0]['Buyer.id']"
         :age="buyerInfo.owner[0]['Buyer.age']"
-      ></BuyerProfile>
+      />
       <BuyerTransactions
         :transactions="buyerInfo.owner[0]['Buyer.transactions']"
-      ></BuyerTransactions>
+      />
       <BuyerProducts
         :products="filteredRecommendedProducts"
-      ></BuyerProducts>
+      />
       <BuyerIps
         :other-buyers="filteredOtherBuyers"
-      ></BuyerIps>
+      />
     </div>
-  </div>
+  </main>
 </template>
 
 <script>
-import BuyerProfile from '@/components/BuyerProfile'
-import BuyerTransactions from '@/components/BuyerTransactions'
-import BuyerProducts from '@/components/BuyerProducts'
-import BuyerIps from '@/components/BuyerIps'
+import BuyerProfile from '@/components/BuyerDetail/BuyerProfile'
+import BuyerTransactions from '@/components/BuyerDetail/BuyerTransactions'
+import BuyerProducts from '@/components/BuyerDetail/BuyerProducts'
+import BuyerIps from '@/components/BuyerDetail/BuyerIps'
 import UpperErrorMessage from '@/components/UpperErrorMessage'
 import Loader from '@/components/Loader'
-import { API_URL } from '@/constants'
+import { fetchData } from '@/utils'
 
 export default {
-  name: 'Buyer',
+  name: 'BuyerDetail',
   components: {
     BuyerProfile,
     BuyerTransactions,
@@ -88,11 +88,7 @@ export default {
     if (this.syncedData) {
       this.error = false
       this.loading = true
-      fetch(`${API_URL}/api/buyers/${this.$route.params.id}`)
-        .then(response => {
-          if (response.ok) return response.json()
-          else throw Error('Fetch data error')
-        })
+      fetchData(`buyers/${this.$route.params.id}`)
         .then(jsonResponse => {
           this.buyerInfo = jsonResponse
           this.loading = false

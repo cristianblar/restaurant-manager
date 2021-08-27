@@ -6,18 +6,18 @@
         link-text="Go to sync"
         link="/"
         message="No data synced yet! Please pick a date to sync"
-      ></upper-error-message>
+      />
       <upper-error-message
         v-else
         link-text="Go back"
         link="/"
         message="Something went wrong... Please, try again"
-      ></upper-error-message>
+      />
     </template>
-    <Loader v-else-if="loading"></Loader>
-    <div v-else class="list-container">
+    <Loader v-else-if="loading" />
+    <section v-else class="list-container">
       <h2>Buyers |<strong>| {{ syncedDate }}</strong></h2>
-      <BuyerList :buyers="buyers"></BuyerList>
+      <BuyerList :buyers="buyers" />
       <v-btn
         v-if="!allBuyersRetrieved && totalBuyers"
         :loading="loadingButton"
@@ -32,15 +32,15 @@
       <h4 v-show="moreLoadError" class="more-error">
         Something went wrong... Please, try again
       </h4>
-    </div>
+    </section>
   </main>
 </template>
 
 <script>
-import BuyerList from '@/components/BuyerList'
+import BuyerList from '@/components/Buyers/BuyerList'
 import UpperErrorMessage from '@/components/UpperErrorMessage'
 import Loader from '@/components/Loader'
-import { API_URL } from '@/constants'
+import { fetchData } from '@/utils'
 
 export default {
   name: 'Buyers',
@@ -75,11 +75,7 @@ export default {
     if (this.syncedData) {
       this.error = false
       this.loading = true
-      fetch(`${API_URL}/api/buyers`)
-        .then(response => {
-          if (response.ok) return response.json()
-          else throw Error('Fetch data error')
-        })
+      fetchData('buyers')
         .then(jsonResponse => {
           this.buyers = jsonResponse.results
           this.totalBuyers = jsonResponse['Buyers.total']
@@ -95,11 +91,7 @@ export default {
   methods: {
     handleMoreLoad () {
       this.loadingButton = true
-      fetch(`${API_URL}/api/buyers?page=${this.nextPage}`)
-        .then(response => {
-          if (response.ok) return response.json()
-          else throw Error('Fetch data error')
-        })
+      fetchData(`buyers?page=${this.nextPage}`)
         .then(jsonResponse => {
           this.buyers = this.buyers.concat(jsonResponse.results)
           this.totalBuyers = jsonResponse['Buyers.total']

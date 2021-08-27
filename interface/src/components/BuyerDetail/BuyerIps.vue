@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <section>
     <v-card
       class="card-main-container"
       elevation="6"
@@ -27,11 +27,11 @@
               </a>
             </v-list-item-action>
           </v-list-item>
-          <v-divider></v-divider>
+          <v-divider />
         </template>
       </v-virtual-scroll>
     </v-card>
-  </div>
+  </section>
 </template>
 
 <script>

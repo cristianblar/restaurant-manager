@@ -6,18 +6,18 @@
       </router-link>
     </div>
 
-    <div class="search-box">
+    <nav class="search-box">
       <v-text-field
         :disabled="!syncedData"
         v-model="inputId"
         class="search-input"
         dark
         label="Search buyer by id"
-      ></v-text-field>
+      />
       <v-btn :disabled="!syncedData" @click="handleSearch" icon color="white">
         <v-icon>mdi-magnify</v-icon>
       </v-btn>
-    </div>
+    </nav>
   </header>
 </template>
 

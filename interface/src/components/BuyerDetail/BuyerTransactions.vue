@@ -12,7 +12,7 @@
             :transaction-id="transaction['Transaction.id']"
             :transaction-products="transaction['Transaction.products']"
             :transaction-cost="transaction.totalCost"
-          ></BuyerTransaction>
+          />
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import BuyerTransaction from '@/components/BuyerTransaction'
+import BuyerTransaction from '@/components/BuyerDetail/BuyerTransaction'
 
 export default {
   name: 'BuyerTransactions',

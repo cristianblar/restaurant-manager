@@ -1,13 +1,15 @@
 <template>
-  <v-card
-    class="mx-auto card-container"
-    elevation="6"
-    shaped
-  >
-    <v-card-title class="card-title">{{ name }}</v-card-title>
-    <v-card-subtitle class="card-subtitle">{{ buyerId }}</v-card-subtitle>
-    <v-card-text class="card-text"><strong>Age: </strong>{{ age }}</v-card-text>
-  </v-card>
+  <section>
+    <v-card
+      class="mx-auto card-container"
+      elevation="6"
+      shaped
+    >
+      <v-card-title class="card-title">{{ name }}</v-card-title>
+      <v-card-subtitle class="card-subtitle">{{ buyerId }}</v-card-subtitle>
+      <v-card-text class="card-text"><strong>Age: </strong>{{ age }}</v-card-text>
+    </v-card>
+  </section>
 </template>
 
 <script>

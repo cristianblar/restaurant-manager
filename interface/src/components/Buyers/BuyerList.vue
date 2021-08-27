@@ -6,13 +6,13 @@
         :buyer-id="buyer['Buyer.id']"
         :age="buyer['Buyer.age']"
         :transactions="buyer['Buyer.transactionsAmount']"
-      ></BuyerListItem>
+      />
     </li>
   </ul>
 </template>
 
 <script>
-import BuyerListItem from '@/components/BuyerListItem'
+import BuyerListItem from '@/components/Buyers/BuyerListItem'
 
 export default {
   name: 'BuyerList',

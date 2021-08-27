@@ -1,11 +1,11 @@
 <template>
-  <div>
+  <main>
     <date-picker
       ref="datePicker"
       :loading="loading"
       :synced-date="syncedDate"
       v-on="$listeners"
-    ></date-picker>
+    />
     <span class="current-date">
       <strong>Current synced date:</strong> {{ syncedDate }}
     </span>
@@ -13,16 +13,16 @@
       :synced-data="syncedData"
       :loading="loading"
       @sync-click="handleSyncClick"
-    ></sync-buttons>
+    />
     <h4 v-show="resultMessage.active" :class="!resultMessage.result && 'wrong'">
       {{ resultMessage.result ? resultMessage.goodMessage : resultMessage.errorMessage }}
     </h4>
-  </div>
+  </main>
 </template>
 
 <script>
-import DatePicker from '@/components/DatePicker'
-import SyncButtons from '@/components/SyncButtons'
+import DatePicker from '@/components/Home/DatePicker'
+import SyncButtons from '@/components/Home/SyncButtons'
 
 export default {
   name: 'Home',
@@ -39,10 +39,10 @@ export default {
   data: () => ({
     loading: false,
     resultMessage: {
-      active: true,
+      active: false,
       result: false,
       goodMessage: 'Data synced successfully',
-      errorMessage: ''
+      errorMessage: 'Something went wrong... Please, try again'
     }
   }),
   components: { DatePicker, SyncButtons },
@@ -62,7 +62,6 @@ export default {
         .catch((err) => {
           console.error(err)
           this.loading = false
-          this.resultMessage.errorMessage = 'Something went wrong... Please, try again'
           this.resultMessage.result = false
           this.resultMessage.active = true
           setTimeout(() => (this.resultMessage.active = false), 4000)

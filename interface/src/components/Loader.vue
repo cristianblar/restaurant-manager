@@ -3,7 +3,7 @@
     class="loader"
     color="#FFBC00"
     :size="60"
-  ></GridLoader>
+  />
 </template>
 
 <script>
