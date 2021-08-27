@@ -59,6 +59,16 @@
         </g>
       </g>
     </svg>
+    <v-btn
+      class="home-button"
+      color="#FFBC00"
+      fab
+      x-large
+      dark
+      @click="$router.push('/')"
+    >
+      🏠
+    </v-btn>
   </div>
 </template>
 
@@ -128,8 +138,9 @@ export default {
   width: auto
   max-width: 460px
   display: flex
+  flex-direction: column
   align-items: center
-  justify-content: center
+  justify-content: space-evenly
 
 .path
   stroke-dasharray: 300
@@ -143,5 +154,9 @@ export default {
   80%, 100%
     fill: transparent
     stroke-dashoffset: -200
+
+.home-button
+  display: block
+  font-size: 3rem
 
 </style>

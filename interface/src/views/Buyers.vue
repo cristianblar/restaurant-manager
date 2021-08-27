@@ -1,46 +1,45 @@
 <template>
-  <div>
-    <div v-if="!syncedData || error" class="no-sync">
-      <div v-if="!syncedData">
-        <h2>No data synced yet! Please pick a date to sync</h2>
-        <router-link class="back-link" to="/">Go to sync</router-link>
-      </div>
-      <div v-else>
-        <h2>Something went wrong... Please, try again</h2>
-        <router-link class="back-link" to="/">Go back</router-link>
-      </div>
-    </div>
-    <div v-else-if="loading">
-      <GridLoader
-        class="loader"
-        color="#FFBC00"
-        :size="60"
-      ></GridLoader>
-    </div>
-    <div class="list-container" v-else>
+  <main>
+    <template v-if="!syncedData || error">
+      <upper-error-message
+        v-if="!syncedData"
+        link-text="Go to sync"
+        link="/"
+        message="No data synced yet! Please pick a date to sync"
+      ></upper-error-message>
+      <upper-error-message
+        v-else
+        link-text="Go back"
+        link="/"
+        message="Something went wrong... Please, try again"
+      ></upper-error-message>
+    </template>
+    <Loader v-else-if="loading"></Loader>
+    <div v-else class="list-container">
       <h2>Buyers |<strong>| {{ syncedDate }}</strong></h2>
       <BuyerList :buyers="buyers"></BuyerList>
+      <v-btn
+        v-if="!allBuyersRetrieved && totalBuyers"
+        :loading="loadingButton"
+        :disabled="loadingButton"
+        class="load-button"
+        rounded
+        color="#FFBC00"
+        @click="handleMoreLoad"
+      >
+        Load more buyers...
+      </v-btn>
+      <h4 v-show="moreLoadError" class="more-error">
+        Something went wrong... Please, try again
+      </h4>
     </div>
-    <v-btn
-      v-if="!allBuyersRetrieved && totalBuyers"
-      :loading="loadingButton"
-      :disabled="loadingButton"
-      class="load-button"
-      rounded
-      color="#FFBC00"
-      @click="handleMoreLoad"
-    >
-      Load more buyers...
-    </v-btn>
-    <h4 v-show="moreLoadError" class="more-error">
-      Something went wrong... Please, try again
-    </h4>
-  </div>
+  </main>
 </template>
 
 <script>
-import { GridLoader } from '@saeris/vue-spinners'
 import BuyerList from '@/components/BuyerList'
+import UpperErrorMessage from '@/components/UpperErrorMessage'
+import Loader from '@/components/Loader'
 import { API_URL } from '@/constants'
 
 export default {
@@ -55,7 +54,7 @@ export default {
       required: true
     }
   },
-  components: { GridLoader, BuyerList },
+  components: { BuyerList, UpperErrorMessage, Loader },
   data () {
     return {
       buyers: [],
@@ -118,29 +117,6 @@ export default {
 </script>
 
 <style lang="sass" scoped>
-
-.no-sync
-  & h2
-    color: #FFBC00
-    font-size: 3.6rem
-    font-weight: 900
-    margin-bottom: 60px
-    text-align: center
-
-  & .back-link
-    color: #190862
-    display: block
-    font-size: 3rem
-    font-weight: 500
-    margin: 0 auto
-    text-decoration: none
-    width: fit-content
-
-    &:hover
-      text-decoration: underline
-
-.loader
-  margin: 60px auto 0
 
 .list-container
   margin: 0 auto

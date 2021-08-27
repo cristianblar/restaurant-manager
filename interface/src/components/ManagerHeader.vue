@@ -35,7 +35,8 @@ export default {
   }),
   methods: {
     handleSearch () {
-      console.log(this.inputId)
+      this.$router.push(`/buyers/${this.inputId.toLowerCase()}`)
+      this.inputId = ''
     }
   }
 }
